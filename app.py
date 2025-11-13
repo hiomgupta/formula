@@ -1,148 +1,138 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
 # ------------------------------------------------------------
-# Page Config
+#  Title & Header
 # ------------------------------------------------------------
-st.set_page_config(
-    page_title="Sustainable Formulation Optimizer",
-    page_icon="🌿",
-    layout="centered"
-)
+st.set_page_config(page_title="Sustainable Formulation Optimizer", page_icon="🌿")
 
-# ------------------------------------------------------------
-# Title & Header
-# ------------------------------------------------------------
 st.title("🌿 Sustainable Moisturizer Formulation Optimizer")
-
 st.write("""
-This app is an **interactive companion tool** to the report 
+This Streamlit app is an **interactive companion tool** to the report 
 *“Sustainable Reformulation of CeraVe Moisturizing Cream.”*
 
-It demonstrates:
+It demonstrates the **computational formulation workflow** discussed in the report, 
+including:
+
 - Ingredient ratio adjustments  
 - Sensory & stability predictions  
-- Sustainability vs. cost trade-offs  
-- ML-inspired optimisation loop  
+- Sustainability impact  
+- Cost implications  
+- The ML-inspired optimisation loop (Figure 4)
+
+All predictions are **modelled based on the scientific logic in the report**.
 """)
 
 st.divider()
 
 # ------------------------------------------------------------
-# Sidebar Inputs
+# Sidebar: Ingredient Sliders
 # ------------------------------------------------------------
 st.sidebar.header("Adjust Sustainable Ingredient Ratios (%)")
 
 shea = st.sidebar.slider("Shea Butter (occlusive)", 0.0, 25.0, 10.0)
 squalane = st.sidebar.slider("Squalane (emollient)", 0.0, 15.0, 4.0)
-lc = st.sidebar.slider("Liquid Crystal Emulsifier", 0.0, 10.0, 3.0)
-gum = st.sidebar.slider("Gum Blend", 0.0, 2.0, 0.6)
-glda = st.sidebar.slider("GLDA (chelating agent)", 0.0, 1.0, 0.3)
+lc = st.sidebar.slider("Liquid Crystal Emulsifier (Olivem-type)", 0.0, 10.0, 3.0)
+gum = st.sidebar.slider("Xanthan + Sclerotium Gum Blend", 0.0, 2.0, 0.6)
+glda = st.sidebar.slider("GLDA (biodegradable chelator)", 0.0, 1.0, 0.3)
 pres = st.sidebar.slider("Natural Preservative System", 0.0, 2.0, 1.0)
 
 total = shea + squalane + lc + gum + glda + pres
-st.sidebar.markdown(f"### Total: **{total:.1f}%**")
+
+st.sidebar.write(f"### Total Active Chassis: **{total:.1f}%**")
 
 # ------------------------------------------------------------
-# Prediction Logic
+# Model Calculations (Designed to Match Your Report)
 # ------------------------------------------------------------
-def clamp(x): 
-    return max(0, min(10, x))
 
-sensory = clamp(0.5*squalane + 0.2*lc - 0.3*gum)
-sustainability = clamp(0.3*lc + 0.3*glda + 0.3*pres - 0.1*shea)
-stability = clamp(0.5*lc + 0.4*gum - 0.1*shea)
-cost = clamp(0.4*squalane + 0.3*lc + 0.2*gum)
+# Sensory Slip Prediction (based on emollients)
+sensory = (
+    0.5 * squalane +   # Squalane improves slip
+    0.2 * lc -         # LC adds some creaminess
+    0.3 * gum          # gums increase tackiness
+)
 
-def indicator(score):
-    if score >= 7: return "🟢"
-    if score >= 4: return "🟡"
-    return "🔴"
+# Sustainability Score
+sustainability = (
+    0.3 * lc +        # LC are PEG-free & sustainable
+    0.3 * glda +      # biodegradable chelator
+    0.3 * pres -      # mild preservatives are good
+    0.1 * shea        # shea has moderate sustainability impact
+)
 
-# ------------------------------------------------------------
-# Ingredient Breakdown (Pie Chart with Matplotlib)
-# ------------------------------------------------------------
-labels = ["Shea Butter", "Squalane", "LC Emulsifier", "Gum Blend", "GLDA", "Preservatives"]
-values = [shea, squalane, lc, gum, glda, pres]
+# Stability Score (LC + gum build structure)
+stability = (
+    0.5 * lc +
+    0.4 * gum -
+    0.1 * shea        # heavy oils destabilize LC systems
+)
 
-fig1, ax1 = plt.subplots()
-ax1.pie(values, labels=labels, autopct='%1.1f%%', startangle=90)
-ax1.axis('equal')
+# Cost Score (Squalane & LC are expensive)
+cost = (
+    0.4 * squalane +
+    0.3 * lc +
+    0.2 * gum
+)
 
-st.subheader("🧴 Ingredient Composition")
-st.pyplot(fig1)
-
-# ------------------------------------------------------------
-# Radar Chart (Performance)
-# ------------------------------------------------------------
-metrics = ["Sensory", "Stability", "Sustainability", "Cost"]
-scores = [sensory, stability, sustainability, cost]
-
-# Repeat first value to close radar chart loop
-scores_radar = scores + scores[:1]
-angles = np.linspace(0, 2*np.pi, len(scores_radar))
-
-fig2, ax2 = plt.subplots(subplot_kw={'projection': 'polar'})
-ax2.plot(angles, scores_radar, marker='o')
-ax2.fill(angles, scores_radar, alpha=0.25)
-ax2.set_xticks(angles[:-1])
-ax2.set_xticklabels(metrics)
-ax2.set_ylim(0, 10)
-
-st.subheader("📈 Formulation Performance Radar Chart")
-st.pyplot(fig2)
+# Clamp all scores between 0 and 10
+def clamp(x): return max(0, min(10, x))
+sensory = clamp(sensory)
+sustainability = clamp(sustainability)
+stability = clamp(stability)
+cost = clamp(cost)
 
 # ------------------------------------------------------------
-# Numeric Metrics
+# Results Display
 # ------------------------------------------------------------
-st.header("📊 Performance Metrics")
+st.header("📊 Predicted Formulation Performance")
 
 col1, col2 = st.columns(2)
-with col1:
-    st.metric("✨ Sensory Slip", f"{sensory:.1f}/10")
-    st.write(f"Status: {indicator(sensory)}")
-with col2:
-    st.metric("🧪 Stability", f"{stability:.1f}/10")
-    st.write(f"Status: {indicator(stability)}")
 
-col3, col4 = st.columns(2)
-with col3:
-    st.metric("🌱 Sustainability", f"{sustainability:.1f}/10")
-    st.write(f"Status: {indicator(sustainability)}")
-with col4:
-    st.metric("💰 Cost Impact", f"{cost:.1f}/10")
-    st.write(f"Status: {indicator(cost)}")
+with col1:
+    st.metric("✨ Sensory Slip Score", f"{sensory:.1f} / 10")
+    st.metric("🧪 Predicted Stability", f"{stability:.1f} / 10")
+
+with col2:
+    st.metric("🌱 Sustainability Score", f"{sustainability:.1f} / 10")
+    st.metric("💰 Cost Impact", f"{cost:.1f} / 10")
 
 st.divider()
 
 # ------------------------------------------------------------
-# Interpretation
+# Explanation Section (Links to Your Report)
 # ------------------------------------------------------------
-st.header("📘 Interpretation")
+st.header("📘 How These Predictions Relate to the Report")
 
 st.markdown("""
 ### 🌱 Sustainability  
-PEG-free LC emulsifiers and GLDA improve environmental performance.
+- Driven by **PEG-free** LC emulsifiers  
+- **GLDA** improves biodegradability  
+- Natural preservatives reduce environmental persistence  
 
 ### ✨ Sensory Slip  
-Squalane enhances glide; gums increase tack.
+- Squalane contributes strong slip  
+- Gums reduce slip (tackiness)  
+- Matches the sensory discussion in the “Trade-offs” section  
 
 ### 🧪 Stability  
-Lamellar LC structures + gums increase stability; excess shea reduces it.
+- LC emulsifiers + gums provide lamellar structure  
+- Shea butter destabilizes at high concentrations  
+- Directly connected to the **MVE vs LC** discussion  
 
 ### 💰 Cost  
-Squalane and LC emulsifiers contribute the most to cost.
+- Squalane and LC emulsifiers are high-cost ingredients  
+- Gum blends moderately increase cost  
+- Reflects cost considerations in the “Scale-Up” section  
 """)
 
 # ------------------------------------------------------------
 # Footer
 # ------------------------------------------------------------
 st.info("""
-This app demonstrates the ML-inspired optimisation loop:
+This tool demonstrates the **ML prediction loop** described in the report:
 1. Adjust ingredients  
 2. Predict outcomes  
 3. Iterate  
-4. Move toward an optimized sustainable formula  
+4. Converge toward an optimized sustainable formula  
+
+It shows how computational thinking can support **green formulation science**.
 """)
